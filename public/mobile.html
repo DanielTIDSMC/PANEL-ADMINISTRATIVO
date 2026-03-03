@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>RetiScan – Cámara Retinal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #06080C;
+            color: white;
+            font-family: 'Outfit', 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .header {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            padding: 16px 0 24px;
+            gap: 12px;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 240, 255, 0.15);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo svg {
+            color: #00F0FF;
+        }
+
+        .title {
+            font-size: 16px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 10px;
+            color: #00F0FF;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+        }
+
+        .status-bar {
+            width: 100%;
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.4);
+            margin-bottom: 16px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+            flex-shrink: 0;
+            transition: all 0.3s;
+        }
+
+        .status-dot.connected {
+            background: #22c55e;
+            box-shadow: 0 0 8px #22c55e;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connecting {
+            background: #f59e0b;
+            animation: pulse 0.8s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        .camera-wrapper {
+            width: 100%;
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1.5px solid rgba(0, 240, 255, 0.2);
+            box-shadow: 0 0 40px rgba(0, 240, 255, 0.1);
+            background: #000;
+            aspect-ratio: 9/16;
+            max-height: 65vh;
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .hud-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .scan-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00F0FF, transparent);
+            animation: scan 3s linear infinite;
+            opacity: 0.7;
+        }
+
+        @keyframes scan {
+            0% {
+                top: 0%;
+            }
+
+            100% {
+                top: 100%;
+            }
+        }
+
+        .corner {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-color: #00F0FF;
+            border-style: solid;
+        }
+
+        .corner.tl {
+            top: 16px;
+            left: 16px;
+            border-width: 2px 0 0 2px;
+        }
+
+        .corner.tr {
+            top: 16px;
+            right: 16px;
+            border-width: 2px 2px 0 0;
+        }
+
+        .corner.bl {
+            bottom: 16px;
+            left: 16px;
+            border-width: 0 0 2px 2px;
+        }
+
+        .corner.br {
+            bottom: 16px;
+            right: 16px;
+            border-width: 0 2px 2px 0;
+        }
+
+        .hud-bottom {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 16px;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .fps-badge {
+            font-size: 10px;
+            font-family: monospace;
+            color: #00F0FF;
+            background: rgba(0, 240, 255, 0.1);
+            padding: 4px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+        }
+
+        .live-badge {
+            font-size: 9px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: #ef4444;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .controls {
+            width: 100%;
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 14px;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #00F0FF;
+            color: #000;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.97);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
+        .no-camera {
+            width: 100%;
+            aspect-ratio: 9/16;
+            max-height: 65vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            gap: 12px;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 13px;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="header">
+        <div class="logo">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <circle cx="12" cy="12" r="10" />
+                <circle cx="12" cy="12" r="3" />
+                <line x1="12" y1="2" x2="12" y2="5" />
+                <line x1="12" y1="19" x2="12" y2="22" />
+                <line x1="2" y1="12" x2="5" y2="12" />
+                <line x1="19" y1="12" x2="22" y2="12" />
+            </svg>
+        </div>
+        <div>
+            <div class="title">RetiScan Mobile</div>
+            <div class="subtitle">Terminal de Captura</div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Desconectado — esperando panel...</span>
+    </div>
+
+    <div id="cameraContainer">
+        <div class="no-camera" id="noCameraMsg">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
+            </svg>
+            <p>Presiona <strong style="color:white">Activar Cámara</strong> para iniciar la transmisión retinal</p>
+        </div>
+        <div class="camera-wrapper" id="cameraWrapper" style="display:none">
+            <video id="video" autoplay playsinline muted></video>
+            <div class="hud-overlay">
+                <div class="scan-line"></div>
+                <div class="corner tl"></div>
+                <div class="corner tr"></div>
+                <div class="corner bl"></div>
+                <div class="corner br"></div>
+                <div class="hud-bottom">
+                    <span class="fps-badge" id="fpsBadge">0 FPS</span>
+                    <span class="live-badge">
+                        <span
+                            style="width:6px;height:6px;background:#ef4444;border-radius:50%;animation:pulse 1s infinite;"></span>
+                        EN VIVO
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-primary" id="startBtn" onclick="startCamera()">📷 Activar Cámara</button>
+        <button class="btn btn-secondary" id="flipBtn" onclick="flipCamera()" style="display:none">🔄</button>
+        <button class="btn btn-danger" id="stopBtn" onclick="stopCamera()" style="display:none">⏹</button>
+    </div>
+
+    <canvas id="canvas" style="display:none"></canvas>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const sessionId = params.get('session') || 'session_' + Math.random().toString(36).slice(2, 6);
+        // Ahora usamos la conexión en el puerto 5173 hacia la ruta "socket" que se redirige por Vite
+        const wsHost = window.location.host;
+
+        let ws = null;
+        let stream = null;
+        let canvas = document.getElementById('canvas');
+        let ctx = canvas.getContext('2d');
+        let video = document.getElementById('video');
+        let streaming = false;
+        let facingMode = 'environment'; // back camera
+        let frameInterval = null;
+        let fpsCount = 0;
+
+        function connectWS() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${wsHost}/socket?session=${sessionId}&role=phone`;
+            setStatus('connecting', 'Conectando al panel...');
+            ws = new WebSocket(wsUrl);
+            ws.onopen = () => setStatus('connected', `Sesión: ${sessionId} · Panel activo`);
+            ws.onclose = () => { setStatus('disconnected', 'Conexión perdida. Reconectando...'); setTimeout(connectWS, 3000); };
+            ws.onerror = () => setStatus('disconnected', 'Error de conexión');
+        }
+
+        function setStatus(state, text) {
+            const dot = document.getElementById('statusDot');
+            const txt = document.getElementById('statusText');
+            dot.className = 'status-dot' + (state === 'connected' ? ' connected' : state === 'connecting' ? ' connecting' : '');
+            txt.textContent = text;
+        }
+
+        async function startCamera() {
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('Tu navegador no soporta o bloquea la cámara (requiere HTTPS o activar flags).');
+                }
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+                    audio: false
+                });
+                video.srcObject = stream;
+                document.getElementById('noCameraMsg').style.display = 'none';
+                document.getElementById('cameraWrapper').style.display = 'block';
+                document.getElementById('startBtn').style.display = 'none';
+                document.getElementById('flipBtn').style.display = 'block';
+                document.getElementById('stopBtn').style.display = 'block';
+                streaming = true;
+                if (!ws || ws.readyState !== WebSocket.OPEN) connectWS();
+                startStreaming();
+            } catch (e) {
+                alert('🔴 Error: ' + e.message + '\n\nNOTA: Si estás en Android, abre chrome://flags, busca "insecure" y añade la IP de tu computadora para permitir el uso de cámara.');
+            }
+        }
+
+        function startStreaming() {
+            canvas.width = 640; canvas.height = 360;
+            setInterval(() => { fpsCount = 0; }, 1000);
+            frameInterval = setInterval(() => {
+                if (!streaming || !ws || ws.readyState !== WebSocket.OPEN) return;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const frame = canvas.toDataURL('image/jpeg', 0.6);
+                ws.send(JSON.stringify({ type: 'video_frame', frame, sessionId }));
+                fpsCount++;
+                document.getElementById('fpsBadge').textContent = fpsCount + ' FPS';
+            }, 100); // ~10fps
+        }
+
+        function flipCamera() {
+            facingMode = facingMode === 'environment' ? 'user' : 'environment';
+            stopCamera();
+            setTimeout(startCamera, 300);
+        }
+
+        function stopCamera() {
+            streaming = false;
+            clearInterval(frameInterval);
+            if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+            video.srcObject = null;
+            document.getElementById('noCameraMsg').style.display = 'flex';
+            document.getElementById('cameraWrapper').style.display = 'none';
+            document.getElementById('startBtn').style.display = 'block';
+            document.getElementById('flipBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'none';
+            if (ws) { ws.send(JSON.stringify({ type: 'camera_stopped', sessionId })); }
+        }
+
+        // Auto connect WS on load
+        connectWS();
+    </script>
+</body>
+
+</html>
