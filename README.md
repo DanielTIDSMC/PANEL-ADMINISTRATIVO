@@ -1,4 +1,4 @@
-# PANEL-ADMINISTRATIVO (RetiScan Admin Panel - Antigravity Edition)
+# PANEL-ADMINISTRATIVO (RetiScan Admin Panel)
 
 Este es un panel de administración futurista diseñado para la plataforma **RetiScan**, siguiendo la estética de la PWA.
 
